@@ -61,7 +61,7 @@
 
     <div id="sidebar">
         <h2>Charlie Maps 🐾</h2>
-        <p><b>Location Saved!</b><br>I now remember where you left the pin. Drag it to update your "Home Base".</p>
+        <p><b>Unit Update:</b><br>Distances are now in <b>Miles & Feet</b>.</p>
         <hr style="border: 0; border-top: 1px solid #ddd; margin: 20px 0;">
         <button class="sidebar-btn" onclick="locateUser()">🎯 Find Me (GPS)</button>
         <button class="sidebar-btn" onclick="clearMemory()">🗑️ Forget Location</button>
@@ -96,32 +96,34 @@
         var userLocation = null;
         var userMarker = null;
 
-        // 3. ROUTING
+        // 3. ROUTING (With Imperial Units)
         var control = L.Routing.control({
             waypoints: [ null, null ],
             routeWhileDragging: true,
             show: false,
+            // THIS TELLS IT TO USE MILES/FEET
+            formatter: new L.Routing.Formatter({
+                units: 'imperial',
+                roundingSensitivity: 1
+            }),
             createMarker: function(i, wp, nWps) {
                 if (i === 0) {
                     return L.marker(wp.latLng, {icon: blueIcon, draggable: true}).on('dragend', function(e) {
-                        saveLocation(e.target.getLatLng()); // SAVE ON DRAG
+                        saveLocation(e.target.getLatLng()); 
                     });
                 }
                 return L.marker(wp.latLng, {icon: redIcon});
             }
         }).addTo(map);
 
-        // 4. MEMORY FUNCTIONS (The New Brain)
+        // 4. MEMORY FUNCTIONS
         function loadSavedLocation() {
             var savedLat = localStorage.getItem("charlieLat");
             var savedLng = localStorage.getItem("charlieLng");
-
             if (savedLat && savedLng) {
-                // If we have a memory, use it!
                 var savedLoc = L.latLng(savedLat, savedLng);
                 updateUserLocation(savedLoc);
             } else {
-                // No memory? Try GPS.
                 locateUser();
             }
         }
@@ -149,12 +151,11 @@
 
         map.on('locationfound', function(e) {
             document.getElementById("gps-btn").classList.remove("loading");
-            saveLocation(e.latlng); // SAVE ON GPS FIND
+            saveLocation(e.latlng);
         });
 
         map.on('locationerror', function(e) {
             document.getElementById("gps-btn").classList.remove("loading");
-            // Only alert if we don't already have a saved location
             if (!localStorage.getItem("charlieLat")) {
                 alert("GPS failed. Please drag the Blue Pin to your location!");
             }
@@ -162,13 +163,8 @@
 
         function updateUserLocation(latlng) {
             userLocation = latlng;
-            // Center map on user
             map.setView(latlng, 16);
-            
-            // Remove old marker if exists (Routing control handles the visible one)
             if (userMarker) map.removeLayer(userMarker);
-
-            // Update Route Start Point
             var currentDest = control.getWaypoints()[1].latLng;
             control.setWaypoints([ userLocation, currentDest || null ]);
         }
@@ -215,9 +211,7 @@
             if (e.key === "Enter") findRoute();
         });
 
-        // LOAD ON START
         loadSavedLocation();
-
     </script>
 </body>
 </html>
