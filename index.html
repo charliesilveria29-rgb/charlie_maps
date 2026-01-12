@@ -26,7 +26,7 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
             display: flex;
             align-items: center;
-            width: 90%; /* Responsive width */
+            width: 90%; 
             max-width: 400px;
             padding: 0 10px;
             box-sizing: border-box;
@@ -65,7 +65,7 @@
         /* --- LOCATE ME BUTTON --- */
         .locate-btn {
             position: absolute;
-            bottom: 100px; /* Above zoom controls */
+            bottom: 100px; 
             right: 10px;
             z-index: 1000;
             background: white;
@@ -103,15 +103,11 @@
 
     <script>
         // 1. SETUP MAP
-        // Default View (if GPS fails)
-        var map = L.map('map', {
-            zoomControl: false 
-        }).setView([40.785091, -73.968285], 13);
+        var map = L.map('map', { zoomControl: false }).setView([40.785091, -73.968285], 13);
 
-        // 2. LAYERS (Google Style)
+        // 2. LAYERS 
         var googleStreets = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { attribution: '' });
         var googleSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '' });
-        
         googleStreets.addTo(map);
 
         L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -127,7 +123,6 @@
             shadowSize: [41, 41]
         });
 
-        // Blue Dot for "Me"
         var blueIcon = new L.Icon({
             iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
             shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
@@ -137,57 +132,57 @@
             shadowSize: [41, 41]
         });
 
-        // 4. GPS LOGIC
+        // 4. IMPROVED GPS LOGIC
         var userLocation = null;
         var userMarker = null;
 
         function locateUser() {
-            map.locate({setView: true, maxZoom: 16});
+            // FIXED: Added "enableHighAccuracy" to try and get real GPS data
+            map.locate({setView: true, maxZoom: 16, enableHighAccuracy: true});
         }
 
-        // When map finds location
         map.on('locationfound', function(e) {
             userLocation = e.latlng;
-            
-            // Remove old marker if exists
             if (userMarker) { map.removeLayer(userMarker); }
-
-            // Add "Me" Marker (Blue)
+            
             userMarker = L.marker(e.latlng, {icon: blueIcon}).addTo(map)
                 .bindPopup("You are here").openPopup();
 
-            // Update routing start point
+            // Update Start Point if route exists
             if (control) {
-                control.setWaypoints([
-                    userLocation, // Start: Me
-                    control.getWaypoints()[1].latLng // End: Keep existing or default
-                ]);
+                var currentWaypoints = control.getWaypoints();
+                // If we have a destination set, keep it, but update start to "Me"
+                if (currentWaypoints[1].latLng) {
+                     control.setWaypoints([ userLocation, currentWaypoints[1].latLng ]);
+                }
             }
         });
 
-        // On Load: Try to find user immediately
+        map.on('locationerror', function(e) {
+            alert("Could not access your location. Please check browser permissions.");
+        });
+
+        // Run immediately
         locateUser();
 
         // 5. ROUTING
         var control = L.Routing.control({
-            waypoints: [ 
-                L.latLng(40.785091, -73.968285), // Default Start
-                null // No destination yet
-            ],
+            waypoints: [ L.latLng(40.785091, -73.968285), null ],
             routeWhileDragging: true,
             geocoder: L.Control.Geocoder.nominatim(),
             show: false,
             createMarker: function(i, wp, nWps) {
-                // Use Blue for start, Red for end
                 if (i === 0) return L.marker(wp.latLng, {icon: blueIcon});
                 return L.marker(wp.latLng, {icon: redIcon});
             }
         }).addTo(map);
 
+        // 6. SEARCH FUNCTION (FIXED)
         function findRoute() {
             var destination = document.getElementById("dest").value;
-            if(!destination) return alert("Enter a place first!");
+            if(!destination) return alert("Please enter a place name!");
 
+            // Use the geocoder built into the routing control
             L.Control.Geocoder.nominatim().geocode(destination, function(results) {
                 if (results && results.length > 0) {
                     var bestResult = results[0];
@@ -195,16 +190,26 @@
                     // Determine Start Point (User Location or Default)
                     var startPoint = userLocation ? userLocation : L.latLng(40.785091, -73.968285);
 
-                    control.setWaypoints([
-                        startPoint, 
-                        bestResult.center
-                    ]);
-                    control.show(); // Show directions panel
+                    control.setWaypoints([ startPoint, bestResult.center ]);
+                    
+                    // Show directions panel
+                    control.show(); 
+                    
+                    // Clear search box to look clean
+                    document.getElementById("dest").value = bestResult.name;
                 } else {
-                    alert("Location not found");
+                    alert("Could not find location: " + destination);
                 }
             });
         }
+
+        // 7. ENABLE "ENTER" KEY
+        document.getElementById("dest").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                findRoute();
+            }
+        });
+
     </script>
 </body>
 </html>
