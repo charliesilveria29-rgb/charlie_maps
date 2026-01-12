@@ -9,29 +9,37 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
 
     <style>
-        body, html { margin: 0; padding: 0; font-family: "Roboto", Arial, sans-serif; overflow: hidden; }
+        /* UNIVERSAL FULLSCREEN FIX */
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; font-family: "Roboto", Arial, sans-serif; }
         
-        /* MOBILE FIX: Use dvh (Dynamic Viewport Height) to handle mobile address bars */
-        #map { width: 100%; height: 100vh; height: 100dvh; z-index: 1; }
+        #map { 
+            position: absolute; 
+            top: 0; bottom: 0; left: 0; right: 0; /* Pins map to all 4 corners */
+            height: 100%; width: 100%; 
+            z-index: 1; 
+        }
 
-        /* SEARCH BAR */
+        /* SEARCH BAR (Centered for Mobile & Desktop) */
         #search-box {
             position: absolute; top: 10px; left: 50%; transform: translateX(-50%); 
             z-index: 1000; background: white; height: 50px; border-radius: 25px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.2);
             display: flex; align-items: center;
-            width: 95%; max-width: 500px; padding: 0 15px; box-sizing: border-box;
+            width: 90%; max-width: 450px; padding: 0 15px; box-sizing: border-box;
         }
 
-        .menu-icon { font-size: 24px; color: #5f6368; padding-right: 10px; cursor: pointer; }
+        .menu-icon { font-size: 24px; color: #5f6368; padding-right: 15px; cursor: pointer; }
         
         input { 
             border: none; outline: none; flex-grow: 1; 
             font-size: 16px; color: #202124; height: 100%;
         }
 
-        .search-btn { background: transparent; border: none; cursor: pointer; font-size: 20px; padding: 10px; color: #5f6368; }
-        .directions-btn { background: transparent; border: none; cursor: pointer; font-size: 24px; padding: 10px; color: #4285F4; border-left: 1px solid #eee; }
+        .directions-btn { 
+            background: transparent; border: none; cursor: pointer; 
+            font-size: 24px; color: #4285F4; padding: 5px 0 5px 10px; 
+            border-left: 1px solid #eee; 
+        }
 
         /* SIDEBAR */
         #sidebar {
@@ -44,7 +52,7 @@
 
         #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); z-index: 1500; display: none; }
 
-        /* LOCATE BUTTON (Bottom Right) */
+        /* LOCATE BUTTON */
         .locate-btn {
             position: absolute; bottom: 30px; right: 20px; z-index: 1000; 
             background: white; width: 50px; height: 50px;
@@ -52,7 +60,6 @@
             cursor: pointer; display: flex; align-items: center; justify-content: center;
             font-size: 24px; color: #666; transition: 0.2s;
         }
-        .locate-btn:active { background: #eee; }
         .locate-btn.loading { background: #ffcc00; color: black; animation: pulse 1s infinite; }
         
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
@@ -62,10 +69,10 @@
 
     <div id="sidebar">
         <h2>Charlie Maps 🐾</h2>
-        <p><b>Mobile Tip:</b><br>Tap the 🎯 button to find your location. If it's wrong, drag the Blue Pin!</p>
+        <p><b>Fix Location:</b><br>Is the Blue Pin wrong? <b>Drag it</b> to your real spot!</p>
         <hr style="border: 0; border-top: 1px solid #ddd; margin: 20px 0;">
-        <button class="sidebar-btn" onclick="locateUser()">🎯 Find Me Now</button>
-        <button class="sidebar-btn" onclick="window.location.reload()">🔄 Refresh Map</button>
+        <button class="sidebar-btn" onclick="locateUser()">🎯 Find Me</button>
+        <button class="sidebar-btn" onclick="window.location.reload()">🔄 Refresh</button>
         <button class="sidebar-btn" onclick="toggleMenu()">❌ Close Menu</button>
     </div>
 
@@ -85,7 +92,7 @@
     <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
 
     <script>
-        // 1. SETUP MAP (Start at NY Default)
+        // 1. SETUP MAP
         var map = L.map('map', { zoomControl: false }).setView([40.785091, -73.968285], 13);
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { attribution: '' }).addTo(map);
         
@@ -103,7 +110,6 @@
             show: false,
             createMarker: function(i, wp, nWps) {
                 if (i === 0) {
-                    // Start Point is Draggable
                     return L.marker(wp.latLng, {icon: blueIcon, draggable: true}).on('dragend', function(e) {
                         userLocation = e.target.getLatLng();
                         control.spliceWaypoints(0, 1, userLocation);
@@ -113,12 +119,10 @@
             }
         }).addTo(map);
 
-        // 4. GPS LOGIC (Manual Trigger Only)
+        // 4. GPS LOGIC
         function locateUser() {
             var btn = document.getElementById("gps-btn");
             btn.classList.add("loading");
-            
-            // Standard accuracy is best for mobile web
             map.locate({setView: true, maxZoom: 16});
         }
 
@@ -129,13 +133,12 @@
 
         map.on('locationerror', function(e) {
             document.getElementById("gps-btn").classList.remove("loading");
-            alert("Could not find GPS. Please drag the map to your location and tap 'Find Me' again, or search manually.");
+            alert("Could not find GPS. Please drag the map manually!");
         });
 
         function updateUserLocation(latlng) {
             userLocation = latlng;
             if (userMarker) map.removeLayer(userMarker);
-            // We just update the route start point, let Routing machine handle the marker
             var currentDest = control.getWaypoints()[1].latLng;
             control.setWaypoints([ userLocation, currentDest || null ]);
         }
@@ -144,9 +147,7 @@
         async function findRoute() {
             var destination = document.getElementById("dest").value;
             if(!destination) return alert("Enter a place!");
-            
-            // Blur keyboard on mobile
-            document.getElementById("dest").blur();
+            document.getElementById("dest").blur(); // Close keyboard
 
             var url = "https://nominatim.openstreetmap.org/search?format=json&q=" + encodeURIComponent(destination);
 
@@ -157,7 +158,7 @@
                     var bestResult = data[0];
                     var destLatLng = L.latLng(bestResult.lat, bestResult.lon);
                     
-                    if (!userLocation) userLocation = map.getCenter(); // Use map center if no GPS
+                    if (!userLocation) userLocation = map.getCenter();
 
                     control.setWaypoints([ userLocation, destLatLng ]);
                     control.show();
@@ -180,7 +181,6 @@
             }
         }
         
-        // Listen for Enter key
         document.getElementById("dest").addEventListener("keypress", function(e) {
             if (e.key === "Enter") findRoute();
         });
