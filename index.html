@@ -7,7 +7,6 @@
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
 
     <style>
         body, html { margin: 0; padding: 0; font-family: "Roboto", Arial, sans-serif; overflow: hidden; }
@@ -63,22 +62,22 @@
             padding: 8px 0 8px 12px;
         }
 
-        /* --- SIDEBAR MENU (New!) --- */
+        /* --- SIDEBAR MENU --- */
         #sidebar {
             position: absolute;
             top: 0;
-            left: -300px; /* Hidden off-screen */
+            left: -300px;
             width: 300px;
             height: 100%;
             background: white;
-            z-index: 2000; /* On top of everything */
+            z-index: 2000;
             box-shadow: 2px 0 5px rgba(0,0,0,0.2);
-            transition: 0.3s; /* Smooth slide animation */
+            transition: 0.3s;
             padding: 20px;
             box-sizing: border-box;
         }
         
-        #sidebar.open { left: 0; } /* Class to slide it in */
+        #sidebar.open { left: 0; }
 
         #sidebar h2 { margin-top: 0; color: #4285F4; }
         #sidebar p { color: #666; line-height: 1.5; }
@@ -97,7 +96,6 @@
         }
         .sidebar-btn:hover { background: #e8eaed; }
 
-        /* Overlay to darken map when menu is open */
         #overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -115,7 +113,7 @@
             background: white;
             width: 40px;
             height: 40px;
-            border-radius: 50%; /* Circle */
+            border-radius: 50%;
             box-shadow: 0 1px 4px rgba(0,0,0,0.3);
             cursor: pointer;
             display: flex;
@@ -130,7 +128,7 @@
 
     <div id="sidebar">
         <h2>Charlie Maps 🐾</h2>
-        <p><b>Search Tip:</b> Since we use a free database, try searching for <b>Addresses</b> (e.g., "26856 Adams Ave") instead of business names.</p>
+        <p><b>Search Tip:</b> Try adding the city name to your search for better results!</p>
         <hr style="border: 0; border-top: 1px solid #ddd; margin: 20px 0;">
         
         <button class="sidebar-btn" onclick="locateUser()">🎯 Find Me</button>
@@ -154,7 +152,6 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
-    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 
     <script>
         // 1. SETUP MAP
@@ -183,34 +180,52 @@
             userMarker = L.marker(e.latlng, {icon: blueIcon}).addTo(map).bindPopup("You").openPopup();
         });
 
-        // 5. ROUTING CONTROL
+        map.on('locationerror', function(e) {
+            console.log("GPS Error: " + e.message);
+        });
+
+        // 5. ROUTING
         var control = L.Routing.control({
             waypoints: [ L.latLng(40.785091, -73.968285), null ],
             routeWhileDragging: true,
-            geocoder: L.Control.Geocoder.nominatim(),
             show: false,
             createMarker: function(i, wp, nWps) {
                 return L.marker(wp.latLng, {icon: (i === 0 ? blueIcon : redIcon)});
             }
         }).addTo(map);
 
-        // 6. SEARCH FUNCTION
-        function findRoute() {
+        // 6. IMPROVED SEARCH (DIRECT FETCH)
+        async function findRoute() {
             var destination = document.getElementById("dest").value;
             if(!destination) return alert("Please enter an address!");
 
-            L.Control.Geocoder.nominatim().geocode(destination, function(results) {
-                if (results && results.length > 0) {
-                    var bestResult = results[0];
+            // Direct call to Nominatim API
+            var url = "https://nominatim.openstreetmap.org/search?format=json&q=" + encodeURIComponent(destination);
+
+            try {
+                var response = await fetch(url);
+                var data = await response.json();
+
+                if (data && data.length > 0) {
+                    var bestResult = data[0];
+                    var destLatLng = L.latLng(bestResult.lat, bestResult.lon);
+
+                    // Move Map
+                    map.setView(destLatLng, 16);
+
+                    // Set Route
                     var startPoint = userLocation ? userLocation : L.latLng(40.785091, -73.968285);
-                    
-                    control.setWaypoints([ startPoint, bestResult.center ]);
-                    control.show(); 
-                    document.getElementById("dest").value = bestResult.name; // Show clean name
+                    control.setWaypoints([ startPoint, destLatLng ]);
+                    control.show();
+
+                    // Cleanup
+                    document.getElementById("dest").value = bestResult.display_name; 
                 } else {
-                    alert("⚠️ Charlie couldn't find: " + destination + "\n\nTry entering the Street Address instead!");
+                    alert("⚠️ Charlie couldn't find that place.\nTry adding the City and State!");
                 }
-            });
+            } catch (err) {
+                alert("Network Error: Could not connect to map server.");
+            }
         }
 
         // 7. MENU FUNCTIONS
@@ -236,10 +251,9 @@
                 map.addLayer(googleSat);
                 isSatellite = true;
             }
-            toggleMenu(); // Close menu after clicking
+            toggleMenu();
         }
 
-        // Enable "Enter" key
         document.getElementById("dest").addEventListener("keypress", function(e) {
             if (e.key === "Enter") findRoute();
         });
