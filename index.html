@@ -9,31 +9,25 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
 
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; }
+        body, html { margin: 0; padding: 0; font-family: "Segoe UI", sans-serif; }
         
-        /* Header Styling */
+        /* Header */
         #header {
             background-color: #2c3e50;
             color: white;
-            padding: 15px;
+            padding: 20px;
             text-align: center;
-            height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            z-index: 1000;
-            position: relative;
+            height: 80px; /* Fixed height */
+            box-sizing: border-box;
         }
 
-        h1 { margin: 0; font-size: 24px; }
-        .subtitle { font-size: 14px; opacity: 0.8; margin-left: 10px; }
-
-        /* Map Container */
+        /* Map Container - FORCE HEIGHT */
         #map {
             width: 100%;
-            height: calc(100% - 90px); /* Fill rest of screen */
-            z-index: 1;
+            height: 600px; /* Force it to be 600px tall */
+            min-height: 80vh; /* Or 80% of the screen height */
+            background-color: #e5e5f7; /* Light gray background so you can see if it loads */
+            border-top: 5px solid #f4a142; /* Orange border to show where map starts */
         }
     </style>
 </head>
@@ -41,7 +35,7 @@
 
     <div id="header">
         <h1>Charlie Maps 🐾</h1>
-        <span class="subtitle">Finding the way to the park</span>
+        <small>Finding the way to the park</small>
     </div>
 
     <div id="map"></div>
@@ -50,20 +44,32 @@
     <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
 
     <script>
-        // --- CONFIGURATION ---
-        // Let's set "Charlie's HQ" to a default location (e.g., Central Park, NY)
-        // You can change these numbers to your own latitude/longitude!
+        // 1. Coordinates
         const hqLat = 40.785091;
         const hqLng = -73.968285;
 
-        // 1. INITIALIZE THE MAP
-        const map = L.map('map').setView([hqLat, hqLng], 13);
+        // 2. Initialize Map
+        var map = L.map('map').setView([hqLat, hqLng], 13);
 
-        // 2. ADD THE MAP TILES (OpenStreetMap - Free!)
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
+        // 3. Add Tiles
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // 3. DEFINE A CUSTOM ICON FOR CHARLIE (Optional fun touch)
-        // We use a simple circle marker for now, but you could use an image.
-        const charlie
+        // 4. Add Marker
+        var marker = L.marker([hqLat, hqLng]).addTo(map);
+        marker.bindPopup("<b>Charlie's HQ</b>").openPopup();
+
+        // 5. Add Routing
+        L.Routing.control({
+            waypoints: [
+                L.latLng(hqLat, hqLng),
+                L.latLng(40.758896, -73.985130)
+            ],
+            routeWhileDragging: true,
+            geocoder: L.Control.Geocoder ? L.Control.Geocoder.nominatim() : null
+        }).addTo(map);
+    </script>
+</body>
+</html>
