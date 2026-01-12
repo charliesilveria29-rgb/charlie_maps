@@ -16,76 +16,35 @@
         /* SEARCH BAR */
         #search-box {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            z-index: 1000;
-            background: white;
-            height: 48px;
-            border-radius: 8px;
+            top: 10px; left: 10px; z-index: 1000;
+            background: white; height: 48px; border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            display: flex;
-            align-items: center;
-            width: 90%; 
-            max-width: 400px;
-            padding: 0 10px;
-            box-sizing: border-box;
+            display: flex; align-items: center;
+            width: 90%; max-width: 400px; padding: 0 10px; box-sizing: border-box;
         }
 
         .menu-icon { font-size: 24px; color: #5f6368; padding: 10px; cursor: pointer; }
         
         input {
-            border: none;
-            outline: none;
-            flex-grow: 1;
-            padding: 0 10px;
-            font-size: 16px;
-            color: #202124;
+            border: none; outline: none; flex-grow: 1;
+            padding: 0 10px; font-size: 16px; color: #202124;
         }
 
         .search-btn {
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            color: #5f6368;
-            font-size: 20px;
-            padding: 8px;
+            background: transparent; border: none; cursor: pointer;
+            color: #5f6368; font-size: 20px; padding: 8px;
             border-right: 1px solid #dfe1e5;
         }
 
         .directions-btn {
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            color: #4285F4;
-            font-size: 22px;
-            padding: 8px 0 8px 12px;
+            background: transparent; border: none; cursor: pointer;
+            color: #4285F4; font-size: 22px; padding: 8px 0 8px 12px;
         }
-
-        /* RIGHT CLICK MENU */
-        #context-menu {
-            position: absolute;
-            display: none;
-            background: white;
-            border: 1px solid #ccc;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
-            z-index: 2000;
-            border-radius: 4px;
-            width: 150px;
-        }
-        
-        #context-menu div {
-            padding: 10px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        #context-menu div:hover { background-color: #f1f1f1; }
 
         /* SIDEBAR */
         #sidebar {
-            position: absolute;
-            top: 0; left: -300px; width: 300px; height: 100%;
-            background: white; z-index: 2000;
-            box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+            position: absolute; top: 0; left: -300px; width: 300px; height: 100%;
+            background: white; z-index: 2000; box-shadow: 2px 0 5px rgba(0,0,0,0.2);
             transition: 0.3s; padding: 20px; box-sizing: border-box;
         }
         #sidebar.open { left: 0; }
@@ -99,29 +58,39 @@
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.3); z-index: 1500; display: none;
         }
-        
+
         /* LOCATE BUTTON */
         .locate-btn {
             position: absolute; bottom: 30px; right: 10px;
             z-index: 1000; background: white; width: 40px; height: 40px;
             border-radius: 50%; box-shadow: 0 1px 4px rgba(0,0,0,0.3);
             cursor: pointer; display: flex; align-items: center; justify-content: center;
-            font-size: 20px; color: #666;
+            font-size: 20px; color: #666; transition: 0.3s;
         }
+        .locate-btn.loading { background: #ffcc00; color: black; }
+
+        /* RIGHT CLICK MENU */
+        #context-menu {
+            position: absolute; display: none; background: white;
+            border: 1px solid #ccc; box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+            z-index: 3000; border-radius: 4px; width: 160px;
+        }
+        #context-menu div { padding: 10px; cursor: pointer; font-size: 14px; }
+        #context-menu div:hover { background-color: #f1f1f1; }
     </style>
 </head>
 <body>
 
     <div id="context-menu">
-        <div onclick="setStartLocation()">📍 Set as My Location</div>
+        <div onclick="setStartLocation()">📍 Set Start Here</div>
     </div>
 
     <div id="sidebar">
         <h2>Charlie Maps 🐾</h2>
-        <p><b>Tips:</b><br>1. Search for <b>City, State</b> (e.g. "San Diego, CA")<br>2. <b>Right-Click</b> anywhere to fix your start location.</p>
+        <p><b>Correcting Location:</b><br>If the blue dot is wrong, <b>Right-Click</b> on your real location and select "Set Start Here".</p>
         <hr style="border: 0; border-top: 1px solid #ddd; margin: 20px 0;">
         <button class="sidebar-btn" onclick="locateUser()">🎯 Find Me (GPS)</button>
-        <button class="sidebar-btn" onclick="window.location.reload()">🔄 Clear Map</button>
+        <button class="sidebar-btn" onclick="window.location.reload()">🔄 Reset Map</button>
         <button class="sidebar-btn" onclick="toggleMenu()">❌ Close Menu</button>
     </div>
 
@@ -130,21 +99,20 @@
     <div id="map">
         <div id="search-box">
             <div class="menu-icon" onclick="toggleMenu()">☰</div>
-            <input type="text" id="dest" placeholder="Search Address + City...">
+            <input type="text" id="dest" placeholder="City, Address or Place...">
             <button class="search-btn" onclick="findRoute()">🔍</button>
             <button class="directions-btn" onclick="findRoute()">➤</button>
         </div>
         
-        <div class="locate-btn" onclick="locateUser()">🎯</div>
+        <div id="gps-btn" class="locate-btn" onclick="locateUser()">🎯</div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
 
     <script>
-        // 1. SETUP MAP (Default to NY so you see the jump)
+        // 1. SETUP MAP
         var map = L.map('map', { zoomControl: false }).setView([40.785091, -73.968285], 13);
-        
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { attribution: '' }).addTo(map);
         
         // 2. ICONS
@@ -156,7 +124,7 @@
         var userMarker = null;
         var rightClickLatLng = null;
 
-        // 4. ROUTING SETUP
+        // 4. ROUTING
         var control = L.Routing.control({
             waypoints: [ null, null ],
             routeWhileDragging: true,
@@ -166,31 +134,31 @@
             }
         }).addTo(map);
 
-        // 5. GPS LOGIC (FIXED ORDER: Listen THEN Locate)
+        // 5. GPS LOGIC (Reverted to Standard Accuracy for reliability)
         function locateUser() {
-            map.locate({setView: true, maxZoom: 16, enableHighAccuracy: true});
+            var btn = document.getElementById("gps-btn");
+            btn.classList.add("loading"); // Turn yellow
+            
+            // Standard accuracy is faster and works better on laptops
+            map.locate({setView: true, maxZoom: 16});
         }
 
         map.on('locationfound', function(e) {
+            document.getElementById("gps-btn").classList.remove("loading");
             updateUserLocation(e.latlng);
         });
 
         map.on('locationerror', function(e) {
-            alert("Could not find your location. Right-click the map to set it manually!");
+            document.getElementById("gps-btn").classList.remove("loading");
+            alert("⚠️ GPS Failed. Please Right-Click the map to set your location manually.");
         });
 
-        // Helper to update "Me"
         function updateUserLocation(latlng) {
             userLocation = latlng;
-            
-            // Remove old marker
             if (userMarker) map.removeLayer(userMarker);
+            userMarker = L.marker(latlng, {icon: blueIcon}).addTo(map).bindPopup("<b>You are here</b>").openPopup();
             
-            // Add new marker
-            userMarker = L.marker(latlng, {icon: blueIcon}).addTo(map)
-                .bindPopup("<b>You are here</b>").openPopup();
-            
-            // If we have a destination, update the route
+            // Update Route Start Point
             var currentDest = control.getWaypoints()[1].latLng;
             if(currentDest) {
                 control.setWaypoints([ userLocation, currentDest ]);
@@ -199,7 +167,6 @@
 
         // 6. RIGHT CLICK LOGIC
         var contextMenu = document.getElementById('context-menu');
-
         map.on('contextmenu', function(e) {
             rightClickLatLng = e.latlng;
             contextMenu.style.top = e.containerPoint.y + 'px';
@@ -211,13 +178,12 @@
             updateUserLocation(rightClickLatLng);
             contextMenu.style.display = 'none';
         }
-
         map.on('click', function() { contextMenu.style.display = 'none'; });
 
-        // 7. ROBUST SEARCH
+        // 7. SEARCH LOGIC
         async function findRoute() {
             var destination = document.getElementById("dest").value;
-            if(!destination) return alert("Please enter an address!");
+            if(!destination) return alert("Please enter a place!");
 
             var url = "https://nominatim.openstreetmap.org/search?format=json&q=" + encodeURIComponent(destination);
 
@@ -229,8 +195,7 @@
                     var bestResult = data[0];
                     var destLatLng = L.latLng(bestResult.lat, bestResult.lon);
 
-                    // If user location unknown, default to NY
-                    if (!userLocation) userLocation = L.latLng(40.785091, -73.968285);
+                    if (!userLocation) userLocation = L.latLng(40.785091, -73.968285); // Default to NY if GPS failed
 
                     control.setWaypoints([ userLocation, destLatLng ]);
                     control.show();
@@ -238,14 +203,11 @@
                     var bounds = L.latLngBounds([userLocation, destLatLng]);
                     map.fitBounds(bounds, {padding: [50, 50]});
                 } else {
-                    alert("⚠️ Address not found. Try adding the City!");
+                    alert("⚠️ Not found. Try adding 'City, State'!");
                 }
-            } catch (err) {
-                alert("Network Error. Check internet.");
-            }
+            } catch (err) { alert("Network Error"); }
         }
 
-        // Menu Toggle
         function toggleMenu() {
             var sidebar = document.getElementById('sidebar');
             var overlay = document.getElementById('overlay');
@@ -257,15 +219,14 @@
                 overlay.style.display = 'block';
             }
         }
-        
-        // Start GPS immediately
+
+        // Run on load
         locateUser();
 
         // Enable Enter Key
         document.getElementById("dest").addEventListener("keypress", function(e) {
             if (e.key === "Enter") findRoute();
         });
-
     </script>
 </body>
 </html>
