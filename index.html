@@ -61,11 +61,11 @@
 
     <div id="sidebar">
         <h2>Charlie Maps 🐾</h2>
-        <p><b>Unit Update:</b><br>Distances are now in <b>Miles & Feet</b>.</p>
+        <p><b>Status:</b> GPS is Active.<br>Units: <b>Miles/Feet</b>.</p>
         <hr style="border: 0; border-top: 1px solid #ddd; margin: 20px 0;">
         <button class="sidebar-btn" onclick="locateUser()">🎯 Find Me (GPS)</button>
-        <button class="sidebar-btn" onclick="clearMemory()">🗑️ Forget Location</button>
-        <button class="sidebar-btn" onclick="window.location.reload()">🔄 Refresh</button>
+        <button class="sidebar-btn" onclick="clearMemory()">🗑️ Reset Location</button>
+        <button class="sidebar-btn" onclick="window.location.reload()">🔄 Refresh Page</button>
         <button class="sidebar-btn" onclick="toggleMenu()">❌ Close Menu</button>
     </div>
 
@@ -96,15 +96,17 @@
         var userLocation = null;
         var userMarker = null;
 
-        // 3. ROUTING (With Imperial Units)
+        // 3. ROUTING (FORCED IMPERIAL)
         var control = L.Routing.control({
             waypoints: [ null, null ],
             routeWhileDragging: true,
             show: false,
-            // THIS TELLS IT TO USE MILES/FEET
+            // Force imperial units in config
+            units: 'imperial', 
             formatter: new L.Routing.Formatter({
                 units: 'imperial',
-                roundingSensitivity: 1
+                roundingSensitivity: 1,
+                distanceTemplate: '{value} {unit}'
             }),
             createMarker: function(i, wp, nWps) {
                 if (i === 0) {
@@ -116,17 +118,48 @@
             }
         }).addTo(map);
 
-        // 4. MEMORY FUNCTIONS
-        function loadSavedLocation() {
+        // 4. GPS & MEMORY LOGIC
+        // Priority: 1. Try GPS immediately. 2. If slow/fail, load Memory.
+        
+        function initApp() {
+            // Check memory first just to center the map nicely while we wait for GPS
             var savedLat = localStorage.getItem("charlieLat");
             var savedLng = localStorage.getItem("charlieLng");
             if (savedLat && savedLng) {
                 var savedLoc = L.latLng(savedLat, savedLng);
-                updateUserLocation(savedLoc);
-            } else {
-                locateUser();
+                map.setView(savedLoc, 15); // Pre-load saved spot
+                // Don't draw the pin yet, wait for GPS to confirm or fail
             }
+            
+            // NOW RUN GPS
+            locateUser();
         }
+
+        function locateUser() {
+            var btn = document.getElementById("gps-btn");
+            btn.classList.add("loading");
+            map.locate({setView: true, maxZoom: 16});
+        }
+
+        map.on('locationfound', function(e) {
+            document.getElementById("gps-btn").classList.remove("loading");
+            // GPS Success! Overwrite everything.
+            saveLocation(e.latlng);
+        });
+
+        map.on('locationerror', function(e) {
+            document.getElementById("gps-btn").classList.remove("loading");
+            // GPS Failed. Fallback to memory.
+            var savedLat = localStorage.getItem("charlieLat");
+            if (savedLat) {
+                var savedLoc = L.latLng(savedLat, localStorage.getItem("charlieLng"));
+                updateUserLocation(savedLoc);
+                // Optional: Alert user only if they clicked the button manually
+                if (e.type === 'locationerror') console.log("Using saved location");
+            } else {
+                alert("GPS failed and no saved location found. Please drag the map manually.");
+            }
+        });
 
         function saveLocation(latlng) {
             userLocation = latlng;
@@ -136,40 +169,22 @@
         }
 
         function clearMemory() {
-            localStorage.removeItem("charlieLat");
-            localStorage.removeItem("charlieLng");
-            alert("Memory Wiped! Refreshing...");
+            localStorage.clear();
+            alert("Location Reset.");
             window.location.reload();
         }
-
-        // 5. GPS LOGIC
-        function locateUser() {
-            var btn = document.getElementById("gps-btn");
-            btn.classList.add("loading");
-            map.locate({setView: true, maxZoom: 16});
-        }
-
-        map.on('locationfound', function(e) {
-            document.getElementById("gps-btn").classList.remove("loading");
-            saveLocation(e.latlng);
-        });
-
-        map.on('locationerror', function(e) {
-            document.getElementById("gps-btn").classList.remove("loading");
-            if (!localStorage.getItem("charlieLat")) {
-                alert("GPS failed. Please drag the Blue Pin to your location!");
-            }
-        });
 
         function updateUserLocation(latlng) {
             userLocation = latlng;
             map.setView(latlng, 16);
             if (userMarker) map.removeLayer(userMarker);
+            
+            // Route updates
             var currentDest = control.getWaypoints()[1].latLng;
             control.setWaypoints([ userLocation, currentDest || null ]);
         }
 
-        // 6. SEARCH LOGIC
+        // 5. SEARCH LOGIC
         async function findRoute() {
             var destination = document.getElementById("dest").value;
             if(!destination) return alert("Enter a place!");
@@ -211,7 +226,9 @@
             if (e.key === "Enter") findRoute();
         });
 
-        loadSavedLocation();
+        // Start!
+        initApp();
+
     </script>
 </body>
 </html>
